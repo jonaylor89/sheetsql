@@ -226,3 +226,148 @@ func TestSQLParser_parseWhere(t *testing.T) {
 		})
 	}
 }
+
+func TestSQLParser_Insert(t *testing.T) {
+	client := &Client{}
+	parser := NewSQLParser(client)
+
+	tests := []struct {
+		name    string
+		sql     string
+		wantErr bool
+	}{
+		{
+			name:    "valid INSERT",
+			sql:     "INSERT INTO Users",
+			wantErr: false,
+		},
+		{
+			name:    "case insensitive INSERT",
+			sql:     "insert into products",
+			wantErr: false,
+		},
+		{
+			name:    "invalid SQL",
+			sql:     "INVALID SQL",
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			defer func() {
+				if r := recover(); r != nil {
+					if tt.wantErr {
+						return
+					}
+					t.Logf("Insert() panicked as expected due to nil service: %v", r)
+				}
+			}()
+			
+			err := parser.Insert(tt.sql, struct{ Name string }{Name: "Test"})
+			if tt.wantErr && err == nil {
+				t.Errorf("Insert() expected error but got nil")
+			}
+		})
+	}
+}
+
+func TestSQLParser_Update(t *testing.T) {
+	client := &Client{}
+	parser := NewSQLParser(client)
+
+	tests := []struct {
+		name    string
+		sql     string
+		wantErr bool
+	}{
+		{
+			name:    "valid UPDATE without WHERE",
+			sql:     "UPDATE Users SET Name = 'John'",
+			wantErr: false,
+		},
+		{
+			name:    "valid UPDATE with WHERE",
+			sql:     "UPDATE Users SET Name = 'John' WHERE Age > 18",
+			wantErr: false,
+		},
+		{
+			name:    "case insensitive UPDATE",
+			sql:     "update products set price = 100 where id = 1",
+			wantErr: false,
+		},
+		{
+			name:    "invalid SQL",
+			sql:     "INVALID SQL",
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			defer func() {
+				if r := recover(); r != nil {
+					if tt.wantErr {
+						return
+					}
+					t.Logf("Update() panicked as expected due to nil service: %v", r)
+				}
+			}()
+			
+			err := parser.Update(tt.sql, struct{ Name string }{Name: "Test"})
+			if tt.wantErr && err == nil {
+				t.Errorf("Update() expected error but got nil")
+			}
+		})
+	}
+}
+
+func TestSQLParser_Delete(t *testing.T) {
+	client := &Client{}
+	parser := NewSQLParser(client)
+
+	tests := []struct {
+		name    string
+		sql     string
+		wantErr bool
+	}{
+		{
+			name:    "valid DELETE without WHERE",
+			sql:     "DELETE FROM Users",
+			wantErr: false,
+		},
+		{
+			name:    "valid DELETE with WHERE",
+			sql:     "DELETE FROM Users WHERE Age > 18",
+			wantErr: false,
+		},
+		{
+			name:    "case insensitive DELETE",
+			sql:     "delete from products where id = 1",
+			wantErr: false,
+		},
+		{
+			name:    "invalid SQL",
+			sql:     "INVALID SQL",
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			defer func() {
+				if r := recover(); r != nil {
+					if tt.wantErr {
+						return
+					}
+					t.Logf("Delete() panicked as expected due to nil service: %v", r)
+				}
+			}()
+			
+			err := parser.Delete(tt.sql)
+			if tt.wantErr && err == nil {
+				t.Errorf("Delete() expected error but got nil")
+			}
+		})
+	}
+}

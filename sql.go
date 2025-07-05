@@ -103,13 +103,66 @@ func (p *SQLParser) parseWhere(query *Query, whereClause string) error {
 }
 
 func (p *SQLParser) Insert(sql string, data interface{}) error {
-	return fmt.Errorf("SQL INSERT not implemented yet")
+	sql = strings.TrimSpace(sql)
+	sql = regexp.MustCompile(`\s+`).ReplaceAllString(sql, " ")
+
+	insertRegex := regexp.MustCompile(`(?i)^INSERT\s+INTO\s+(\w+)`)
+	matches := insertRegex.FindStringSubmatch(sql)
+
+	if len(matches) == 0 {
+		return fmt.Errorf("invalid INSERT SQL syntax")
+	}
+
+	tableName := matches[1]
+	query := p.client.From(tableName)
+
+	return query.Insert(data)
 }
 
 func (p *SQLParser) Update(sql string, data interface{}) error {
-	return fmt.Errorf("SQL UPDATE not implemented yet")
+	sql = strings.TrimSpace(sql)
+	sql = regexp.MustCompile(`\s+`).ReplaceAllString(sql, " ")
+
+	updateRegex := regexp.MustCompile(`(?i)^UPDATE\s+(\w+)\s+SET\s+.+?(?:\s+WHERE\s+(.+?))?$`)
+	matches := updateRegex.FindStringSubmatch(sql)
+
+	if len(matches) == 0 {
+		return fmt.Errorf("invalid UPDATE SQL syntax")
+	}
+
+	tableName := matches[1]
+	query := p.client.From(tableName)
+
+	if len(matches) > 2 && matches[2] != "" {
+		whereClause := matches[2]
+		if err := p.parseWhere(query, whereClause); err != nil {
+			return fmt.Errorf("failed to parse WHERE clause: %w", err)
+		}
+	}
+
+	return query.Update(data)
 }
 
 func (p *SQLParser) Delete(sql string) error {
-	return fmt.Errorf("SQL DELETE not implemented yet")
+	sql = strings.TrimSpace(sql)
+	sql = regexp.MustCompile(`\s+`).ReplaceAllString(sql, " ")
+
+	deleteRegex := regexp.MustCompile(`(?i)^DELETE\s+FROM\s+(\w+)(?:\s+WHERE\s+(.+?))?$`)
+	matches := deleteRegex.FindStringSubmatch(sql)
+
+	if len(matches) == 0 {
+		return fmt.Errorf("invalid DELETE SQL syntax")
+	}
+
+	tableName := matches[1]
+	query := p.client.From(tableName)
+
+	if len(matches) > 2 && matches[2] != "" {
+		whereClause := matches[2]
+		if err := p.parseWhere(query, whereClause); err != nil {
+			return fmt.Errorf("failed to parse WHERE clause: %w", err)
+		}
+	}
+
+	return query.Delete()
 }
