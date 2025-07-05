@@ -222,3 +222,130 @@ func TestIntegration_Insert(t *testing.T) {
 		}
 	}
 }
+
+func TestIntegration_Update(t *testing.T) {
+	client := setupIntegrationTest(t)
+
+	if os.Getenv("ENABLE_WRITE_TESTS") != "true" {
+		t.Skip("Write tests disabled. Set ENABLE_WRITE_TESTS=true to enable")
+	}
+
+	testUser := User{
+		Name:  "Update Test User",
+		Email: "update@example.com",
+		Age:   25,
+		City:  "Update City",
+	}
+
+	err := client.From("Sheet1").Insert(testUser)
+	if err != nil {
+		t.Fatalf("Failed to insert test user: %v", err)
+	}
+
+	var users []User
+	err = client.From("Sheet1").
+		Where("Name", "=", "Update Test User").
+		Get(&users)
+	if err != nil {
+		t.Fatalf("Failed to query inserted test user: %v", err)
+	}
+
+	if len(users) == 0 {
+		t.Fatal("Test user not found after insert")
+	}
+
+	updatedUser := User{
+		Name:  "Update Test User",
+		Email: "updated@example.com",
+		Age:   35,
+		City:  "Updated City",
+	}
+
+	err = client.From("Sheet1").
+		Where("Name", "=", "Update Test User").
+		Update(updatedUser)
+	if err != nil {
+		t.Fatalf("Failed to update user: %v", err)
+	}
+
+	var updatedUsers []User
+	err = client.From("Sheet1").
+		Where("Name", "=", "Update Test User").
+		Get(&updatedUsers)
+	if err != nil {
+		t.Fatalf("Failed to query updated user: %v", err)
+	}
+
+	if len(updatedUsers) == 0 {
+		t.Error("Updated user not found")
+	} else {
+		user := updatedUsers[0]
+		if user.Email != "updated@example.com" {
+			t.Errorf("Email not updated: got %s, expected updated@example.com", user.Email)
+		}
+		if user.Age != 35 {
+			t.Errorf("Age not updated: got %d, expected 35", user.Age)
+		}
+		if user.City != "Updated City" {
+			t.Errorf("City not updated: got %s, expected Updated City", user.City)
+		}
+	}
+
+	err = client.From("Sheet1").
+		Where("Name", "=", "Update Test User").
+		Delete()
+	if err != nil {
+		t.Logf("Failed to cleanup test user: %v", err)
+	}
+}
+
+func TestIntegration_Delete(t *testing.T) {
+	client := setupIntegrationTest(t)
+
+	if os.Getenv("ENABLE_WRITE_TESTS") != "true" {
+		t.Skip("Write tests disabled. Set ENABLE_WRITE_TESTS=true to enable")
+	}
+
+	testUser := User{
+		Name:  "Delete Test User",
+		Email: "delete@example.com",
+		Age:   40,
+		City:  "Delete City",
+	}
+
+	err := client.From("Sheet1").Insert(testUser)
+	if err != nil {
+		t.Fatalf("Failed to insert test user: %v", err)
+	}
+
+	var users []User
+	err = client.From("Sheet1").
+		Where("Name", "=", "Delete Test User").
+		Get(&users)
+	if err != nil {
+		t.Fatalf("Failed to query inserted test user: %v", err)
+	}
+
+	if len(users) == 0 {
+		t.Fatal("Test user not found after insert")
+	}
+
+	err = client.From("Sheet1").
+		Where("Name", "=", "Delete Test User").
+		Delete()
+	if err != nil {
+		t.Fatalf("Failed to delete user: %v", err)
+	}
+
+	var deletedUsers []User
+	err = client.From("Sheet1").
+		Where("Name", "=", "Delete Test User").
+		Get(&deletedUsers)
+	if err != nil {
+		t.Fatalf("Failed to query after delete: %v", err)
+	}
+
+	if len(deletedUsers) != 0 {
+		t.Errorf("Expected 0 users after delete, got %d", len(deletedUsers))
+	}
+}

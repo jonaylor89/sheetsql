@@ -340,9 +340,157 @@ func (q *Query) Insert(data interface{}) error {
 }
 
 func (q *Query) Update(data interface{}) error {
-	return fmt.Errorf("update not implemented yet")
+	dataValue := reflect.ValueOf(data)
+	if dataValue.Kind() == reflect.Ptr {
+		dataValue = dataValue.Elem()
+	}
+
+	if dataValue.Kind() != reflect.Struct {
+		return fmt.Errorf("data must be a struct or pointer to struct")
+	}
+
+	readRange := fmt.Sprintf("%s!A:Z", q.sheetName)
+	resp, err := q.client.service.Spreadsheets.Values.Get(q.client.spreadsheetID, readRange).Do()
+	if err != nil {
+		return fmt.Errorf("failed to read sheet: %w", err)
+	}
+
+	if len(resp.Values) == 0 {
+		return fmt.Errorf("no data found in sheet")
+	}
+
+	headers := make([]string, len(resp.Values[0]))
+	for i, header := range resp.Values[0] {
+		headers[i] = fmt.Sprintf("%v", header)
+	}
+
+	fieldMap := make(map[string]int)
+	for i, header := range headers {
+		fieldMap[header] = i
+	}
+
+	updatedRows := 0
+	for rowIndex, row := range resp.Values[1:] {
+		if !q.matchesWhere(row, headers, fieldMap) {
+			continue
+		}
+
+		actualRowIndex := rowIndex + 2
+		updatedRow := make([]interface{}, len(headers))
+		copy(updatedRow, row)
+
+		dataType := dataValue.Type()
+		for i := 0; i < dataType.NumField(); i++ {
+			field := dataType.Field(i)
+			fieldValue := dataValue.Field(i)
+
+			tagValue := field.Tag.Get("sheet")
+			if tagValue == "" {
+				tagValue = field.Name
+			}
+
+			colIndex, exists := fieldMap[tagValue]
+			if !exists {
+				continue
+			}
+
+			updatedRow[colIndex] = fieldValue.Interface()
+		}
+
+		updateRange := fmt.Sprintf("%s!A%d:Z%d", q.sheetName, actualRowIndex, actualRowIndex)
+		valueRange := &sheets.ValueRange{
+			Values: [][]interface{}{updatedRow},
+		}
+
+		_, err = q.client.service.Spreadsheets.Values.Update(q.client.spreadsheetID, updateRange, valueRange).
+			ValueInputOption("RAW").
+			Do()
+
+		if err != nil {
+			return fmt.Errorf("failed to update row %d: %w", actualRowIndex, err)
+		}
+
+		updatedRows++
+	}
+
+	if updatedRows == 0 {
+		return fmt.Errorf("no rows matched the where conditions")
+	}
+
+	return nil
 }
 
 func (q *Query) Delete() error {
-	return fmt.Errorf("delete not implemented yet")
+	readRange := fmt.Sprintf("%s!A:Z", q.sheetName)
+	resp, err := q.client.service.Spreadsheets.Values.Get(q.client.spreadsheetID, readRange).Do()
+	if err != nil {
+		return fmt.Errorf("failed to read sheet: %w", err)
+	}
+
+	if len(resp.Values) == 0 {
+		return fmt.Errorf("no data found in sheet")
+	}
+
+	headers := make([]string, len(resp.Values[0]))
+	for i, header := range resp.Values[0] {
+		headers[i] = fmt.Sprintf("%v", header)
+	}
+
+	fieldMap := make(map[string]int)
+	for i, header := range headers {
+		fieldMap[header] = i
+	}
+
+	var rowsToDelete []int
+	for rowIndex, row := range resp.Values[1:] {
+		if q.matchesWhere(row, headers, fieldMap) {
+			actualRowIndex := rowIndex + 2
+			rowsToDelete = append(rowsToDelete, actualRowIndex)
+		}
+	}
+
+	if len(rowsToDelete) == 0 {
+		return fmt.Errorf("no rows matched the where conditions")
+	}
+
+	for i := len(rowsToDelete) - 1; i >= 0; i-- {
+		rowIndex := rowsToDelete[i]
+		
+		batchUpdateRequest := &sheets.BatchUpdateSpreadsheetRequest{
+			Requests: []*sheets.Request{
+				{
+					DeleteDimension: &sheets.DeleteDimensionRequest{
+						Range: &sheets.DimensionRange{
+							SheetId:    q.getSheetId(),
+							Dimension:  "ROWS",
+							StartIndex: int64(rowIndex - 1),
+							EndIndex:   int64(rowIndex),
+						},
+					},
+				},
+			},
+		}
+
+		_, err = q.client.service.Spreadsheets.BatchUpdate(q.client.spreadsheetID, batchUpdateRequest).Do()
+		if err != nil {
+			return fmt.Errorf("failed to delete row %d: %w", rowIndex, err)
+		}
+	}
+
+	return nil
+}
+
+func (q *Query) getSheetId() int64 {
+	resp, err := q.client.service.Spreadsheets.Get(q.client.spreadsheetID).Do()
+	if err != nil {
+		return 0
+	}
+
+	for _, sheet := range resp.Sheets {
+		if sheet.Properties.Title == q.sheetName {
+			return sheet.Properties.SheetId
+		}
+	}
+
+	return 0
 }

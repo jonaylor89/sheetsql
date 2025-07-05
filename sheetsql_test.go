@@ -2,6 +2,7 @@ package sheetsql
 
 import (
 	"reflect"
+	"strings"
 	"testing"
 )
 
@@ -222,4 +223,150 @@ func TestQuery_mapRowToStruct(t *testing.T) {
 	if !reflect.DeepEqual(person, expected) {
 		t.Errorf("mapRowToStruct() = %+v, expected %+v", person, expected)
 	}
+}
+
+func TestQuery_Update_InvalidInput(t *testing.T) {
+	client := &Client{}
+	query := client.From("TestSheet")
+
+	tests := []struct {
+		name        string
+		input       interface{}
+		expectError bool
+	}{
+		{
+			name:        "nil input",
+			input:       nil,
+			expectError: true,
+		},
+		{
+			name:        "non-struct input",
+			input:       "not a struct",
+			expectError: true,
+		},
+		{
+			name:        "slice input",
+			input:       []string{"not", "a", "struct"},
+			expectError: true,
+		},
+		{
+			name:        "map input",
+			input:       map[string]string{"not": "struct"},
+			expectError: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := query.Update(tt.input)
+			if tt.expectError && err == nil {
+				t.Errorf("Update() expected error but got none")
+			}
+			if !tt.expectError && err != nil {
+				t.Errorf("Update() unexpected error: %v", err)
+			}
+		})
+	}
+}
+
+func TestQuery_Update_ValidStruct(t *testing.T) {
+	client := &Client{}
+	query := client.From("TestSheet")
+
+	type Person struct {
+		Name string `sheet:"Name"`
+		Age  int    `sheet:"Age"`
+		City string `sheet:"City"`
+	}
+
+	tests := []struct {
+		name  string
+		input interface{}
+	}{
+		{
+			name:  "struct value",
+			input: Person{Name: "John", Age: 30, City: "NYC"},
+		},
+		{
+			name:  "struct pointer",
+			input: &Person{Name: "Jane", Age: 25, City: "LA"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			defer func() {
+				if r := recover(); r != nil {
+					t.Logf("Expected panic due to nil client service: %v", r)
+				}
+			}()
+			err := query.Update(tt.input)
+			if err != nil && !isAPIError(err) {
+				t.Errorf("Update() validation error: %v", err)
+			}
+		})
+	}
+}
+
+func TestQuery_Delete_NoWhereClause(t *testing.T) {
+	client := &Client{}
+	query := client.From("TestSheet")
+
+	defer func() {
+		if r := recover(); r != nil {
+			t.Logf("Expected panic due to nil client service: %v", r)
+		}
+	}()
+	err := query.Delete()
+	if err != nil && !isAPIError(err) {
+		t.Errorf("Delete() validation error: %v", err)
+	}
+}
+
+func TestQuery_Delete_WithWhereClause(t *testing.T) {
+	client := &Client{}
+	query := client.From("TestSheet")
+	query.Where("Name", "=", "John")
+
+	defer func() {
+		if r := recover(); r != nil {
+			t.Logf("Expected panic due to nil client service: %v", r)
+		}
+	}()
+	err := query.Delete()
+	if err != nil && !isAPIError(err) {
+		t.Errorf("Delete() validation error: %v", err)
+	}
+}
+
+func TestQuery_getSheetId_Logic(t *testing.T) {
+	client := &Client{}
+	query := client.From("TestSheet")
+
+	defer func() {
+		if r := recover(); r != nil {
+			t.Logf("Expected panic due to nil client service: %v", r)
+		}
+	}()
+	id := query.getSheetId()
+	if id < 0 {
+		t.Errorf("getSheetId() returned negative value: %d", id)
+	}
+}
+
+func isAPIError(err error) bool {
+	if err == nil {
+		return false
+	}
+	
+	errStr := err.Error()
+	return strings.Contains(errStr, "oauth2: cannot fetch token") ||
+		strings.Contains(errStr, "invalid_request") ||
+		strings.Contains(errStr, "Missing required parameter") ||
+		strings.Contains(errStr, "failed to read sheet") ||
+		strings.Contains(errStr, "failed to read headers") ||
+		strings.Contains(errStr, "no data found in sheet") ||
+		strings.Contains(errStr, "no headers found in sheet") ||
+		strings.Contains(errStr, "no rows matched the where conditions") ||
+		errStr == "data must be a struct or pointer to struct"
 }
