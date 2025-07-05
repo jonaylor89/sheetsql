@@ -12,7 +12,7 @@ import (
 )
 
 type Client struct {
-	service      *sheets.Service
+	service       *sheets.Service
 	spreadsheetID string
 }
 
@@ -37,7 +37,7 @@ func NewClient(ctx context.Context, spreadsheetID string, opts ...option.ClientO
 	}
 
 	return &Client{
-		service:      srv,
+		service:       srv,
 		spreadsheetID: spreadsheetID,
 	}, nil
 }
@@ -455,7 +455,7 @@ func (q *Query) Delete() error {
 
 	for i := len(rowsToDelete) - 1; i >= 0; i-- {
 		rowIndex := rowsToDelete[i]
-		
+
 		batchUpdateRequest := &sheets.BatchUpdateSpreadsheetRequest{
 			Requests: []*sheets.Request{
 				{

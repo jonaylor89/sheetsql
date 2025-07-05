@@ -18,7 +18,7 @@ type User struct {
 
 func ExampleClient_fluent() {
 	ctx := context.Background()
-	
+
 	client, err := sheetsql.NewClient(ctx, "your-spreadsheet-id", option.WithCredentialsFile("credentials.json"))
 	if err != nil {
 		log.Fatal(err)
@@ -42,14 +42,14 @@ func ExampleClient_fluent() {
 
 func ExampleClient_sql() {
 	ctx := context.Background()
-	
+
 	client, err := sheetsql.NewClient(ctx, "your-spreadsheet-id", option.WithCredentialsFile("credentials.json"))
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	parser := sheetsql.NewSQLParser(client)
-	
+
 	var users []User
 	err = parser.Query("SELECT * FROM Users WHERE Age > 18 AND Name LIKE 'John' LIMIT 10", &users)
 	if err != nil {
@@ -63,7 +63,7 @@ func ExampleClient_sql() {
 
 func ExampleClient_insert() {
 	ctx := context.Background()
-	
+
 	client, err := sheetsql.NewClient(ctx, "your-spreadsheet-id", option.WithCredentialsFile("credentials.json"))
 	if err != nil {
 		log.Fatal(err)

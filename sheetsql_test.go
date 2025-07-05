@@ -358,7 +358,7 @@ func isAPIError(err error) bool {
 	if err == nil {
 		return false
 	}
-	
+
 	errStr := err.Error()
 	return strings.Contains(errStr, "oauth2: cannot fetch token") ||
 		strings.Contains(errStr, "invalid_request") ||
