@@ -315,7 +315,6 @@ MIT License - see LICENSE file for details.
 
 ## Roadmap
 
-- [ ] Update and Delete operations
 - [ ] Batch insert operations
 - [ ] Aggregation functions
 - [ ] Multiple sheet joins
