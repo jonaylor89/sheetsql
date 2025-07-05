@@ -9,6 +9,8 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    env:
+      GOOGLE_CREDENTIALS_JSON: ${{ secrets.GOOGLE_CREDENTIALS_JSON }}
     strategy:
       matrix:
         go-version: [1.19, 1.20, 1.21]
@@ -36,15 +38,13 @@ jobs:
       run: go test -v -race -coverprofile=coverage.out ./... -short
 
     - name: Setup Google credentials
-      if: ${{ secrets.GOOGLE_CREDENTIALS_JSON }}
-      env:
-        GOOGLE_CREDENTIALS_JSON: ${{ secrets.GOOGLE_CREDENTIALS_JSON }}
+      if: ${{ env.GOOGLE_CREDENTIALS_JSON }}
       run: |
         echo "$GOOGLE_CREDENTIALS_JSON" > credentials.json
         export GOOGLE_CREDENTIALS_FILE=credentials.json
 
     - name: Run integration tests
-      if: ${{ secrets.GOOGLE_CREDENTIALS_JSON }}
+      if: ${{ env.GOOGLE_CREDENTIALS_JSON }}
       env:
         GOOGLE_CREDENTIALS_FILE: credentials.json
       run: go test -v -race ./... -run Integration
