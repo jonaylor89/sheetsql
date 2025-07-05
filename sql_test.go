@@ -263,7 +263,7 @@ func TestSQLParser_Insert(t *testing.T) {
 					t.Logf("Insert() panicked as expected due to nil service: %v", r)
 				}
 			}()
-			
+
 			err := parser.Insert(tt.sql, struct{ Name string }{Name: "Test"})
 			if tt.wantErr && err == nil {
 				t.Errorf("Insert() expected error but got nil")
@@ -313,7 +313,7 @@ func TestSQLParser_Update(t *testing.T) {
 					t.Logf("Update() panicked as expected due to nil service: %v", r)
 				}
 			}()
-			
+
 			err := parser.Update(tt.sql, struct{ Name string }{Name: "Test"})
 			if tt.wantErr && err == nil {
 				t.Errorf("Update() expected error but got nil")
@@ -363,7 +363,7 @@ func TestSQLParser_Delete(t *testing.T) {
 					t.Logf("Delete() panicked as expected due to nil service: %v", r)
 				}
 			}()
-			
+
 			err := parser.Delete(tt.sql)
 			if tt.wantErr && err == nil {
 				t.Errorf("Delete() expected error but got nil")
