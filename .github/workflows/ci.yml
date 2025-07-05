@@ -36,13 +36,15 @@ jobs:
       run: go test -v -race -coverprofile=coverage.out ./... -short
 
     - name: Setup Google credentials
-      if: ${{ secrets.GOOGLE_CREDENTIALS_JSON != '' }}
+      if: ${{ secrets.GOOGLE_CREDENTIALS_JSON }}
+      env:
+        GOOGLE_CREDENTIALS_JSON: ${{ secrets.GOOGLE_CREDENTIALS_JSON }}
       run: |
-        echo '${{ secrets.GOOGLE_CREDENTIALS_JSON }}' > credentials.json
+        echo "$GOOGLE_CREDENTIALS_JSON" > credentials.json
         export GOOGLE_CREDENTIALS_FILE=credentials.json
 
     - name: Run integration tests
-      if: ${{ secrets.GOOGLE_CREDENTIALS_JSON != '' }}
+      if: ${{ secrets.GOOGLE_CREDENTIALS_JSON }}
       env:
         GOOGLE_CREDENTIALS_FILE: credentials.json
       run: go test -v -race ./... -run Integration
