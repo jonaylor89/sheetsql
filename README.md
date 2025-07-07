@@ -15,7 +15,7 @@ A Go ORM for Google Sheets that allows you to query and manipulate Google Sheets
 ## Installation
 
 ```bash
-go get github.com/johannes/sheetsql
+go get github.com/jonaylor89/sheetsql
 ```
 
 ## Quick Start
